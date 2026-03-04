@@ -204,9 +204,12 @@ const platformDocumentMap = {
 const toBase64 = (file) => new Promise((resolve) => {
   const reader = new FileReader();
   reader.onload = () => {
-    // Remove newlines and whitespace from base64
-    const clean = reader.result.replace(/\s/g, '');
-    resolve(clean);
+    // Aggressively remove newlines, tabs and all whitespace
+    const result = reader.result
+      .replace(/[\r\n\t]/g, '')
+      .replace(/\s+/g, '')
+      .trim();
+    resolve(result);
   };
   reader.readAsDataURL(file);
 });
@@ -1217,8 +1220,16 @@ export default function Home() {
     setErrorMessage(null);
 
     try {
-      const cleanImage = formData.mainImageBase64?.replace(/\s/g, '') || "default";
-      const cleanLogo = formData.brandLogoBase64?.replace(/\s/g, '') || "default";
+      const cleanBase64 = (str) => {
+        if (!str || str === 'default') return 'default';
+        return str
+          .replace(/[\r\n\t]/g, '')  // remove newlines/tabs
+          .replace(/\s+/g, '')        // remove all whitespace
+          .trim();
+      };
+
+      const cleanedMainImage = cleanBase64(formData.mainImageBase64);
+      const cleanedBrandLogo = cleanBase64(formData.brandLogoBase64);
 
       const response = await fetch('/api/generate-image', {
         method: 'POST',
@@ -1226,8 +1237,8 @@ export default function Home() {
         body: JSON.stringify({
           mainTitle: formData.mainTitle,
           captionText: formData.captionText,
-          mainImageBase64: cleanImage,
-          brandLogoBase64: cleanLogo,
+          mainImageBase64: cleanedMainImage,
+          brandLogoBase64: cleanedBrandLogo,
           platform: formData.platform
         }),
       });

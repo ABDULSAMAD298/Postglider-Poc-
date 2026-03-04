@@ -38,14 +38,20 @@ export async function POST(request) {
             platform = 'instagram',
         } = await request.json();
 
-        if (!mainTitle || !captionText) {
+        // Aggressively sanitize input text and API Key to remove any hidden control characters (0x00-0x1F)
+        const sanitize = (str) => typeof str === 'string' ? str.replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim() : str;
+
+        const cleanTitle = sanitize(mainTitle);
+        const cleanCaption = sanitize(captionText);
+        const apiKey = sanitize(process.env.PIXELIXE_API_KEY);
+
+        if (!cleanTitle || !cleanCaption) {
             return Response.json(
                 { error: 'Post title and caption text are required.' },
                 { status: 400 }
             );
         }
 
-        const apiKey = process.env.PIXELIXE_API_KEY;
         if (!apiKey) {
             return Response.json(
                 { error: 'Pixelixe API key is not configured.' },
@@ -56,7 +62,6 @@ export async function POST(request) {
         const documentUid = platformDocumentMap[platform] || platformDocumentMap.instagram;
 
         // Optional: Upload to ImgBB if needed. 
-        // If IMGBB_API_KEY is not set, these return the original base64/default.
         const mainImageUrl = await uploadToImgBB(mainImageBase64 || 'default');
         const brandLogoUrl = await uploadToImgBB(brandLogoBase64 || 'default');
 
@@ -64,14 +69,14 @@ export async function POST(request) {
             {
                 name: 'main_title',
                 type: 'text',
-                text: mainTitle,
+                text: cleanTitle,
                 color: 'rgb(255, 255, 255)',
                 visible: 'true',
             },
             {
                 name: 'caption_text',
                 type: 'text',
-                text: captionText,
+                text: cleanCaption,
                 color: 'rgb(255, 255, 255)',
                 visible: 'true',
             },
@@ -113,7 +118,17 @@ export async function POST(request) {
             }
         );
 
-        const data = await response.json();
+        const responseText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse Pixelixe JSON response:', responseText);
+            return Response.json(
+                { error: `Pixelixe returned an invalid response (not JSON). Status: ${response.status}`, raw: responseText },
+                { status: 500 }
+            );
+        }
 
         if (!response.ok) {
             const errorMessage =
