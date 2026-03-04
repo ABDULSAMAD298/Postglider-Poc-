@@ -203,7 +203,11 @@ const platformDocumentMap = {
 
 const toBase64 = (file) => new Promise((resolve) => {
   const reader = new FileReader();
-  reader.onload = () => resolve(reader.result);
+  reader.onload = () => {
+    // Remove newlines and whitespace from base64
+    const clean = reader.result.replace(/\s/g, '');
+    resolve(clean);
+  };
   reader.readAsDataURL(file);
 });
 
@@ -1213,14 +1217,17 @@ export default function Home() {
     setErrorMessage(null);
 
     try {
+      const cleanImage = formData.mainImageBase64?.replace(/\s/g, '') || "default";
+      const cleanLogo = formData.brandLogoBase64?.replace(/\s/g, '') || "default";
+
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mainTitle: formData.mainTitle,
           captionText: formData.captionText,
-          mainImageBase64: formData.mainImageBase64,
-          brandLogoBase64: formData.brandLogoBase64,
+          mainImageBase64: cleanImage,
+          brandLogoBase64: cleanLogo,
           platform: formData.platform
         }),
       });
