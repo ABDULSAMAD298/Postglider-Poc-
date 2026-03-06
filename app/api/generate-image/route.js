@@ -34,6 +34,7 @@ export async function POST(request) {
             mainTitle,
             captionText,
             mainImageBase64,
+            mainImageUrl: passedMainImageUrl,
             brandLogoBase64,
             platform = 'instagram',
         } = await request.json();
@@ -61,8 +62,8 @@ export async function POST(request) {
 
         const documentUid = platformDocumentMap[platform] || platformDocumentMap.instagram;
 
-        // Optional: Upload to ImgBB if needed. 
-        const mainImageUrl = await uploadToImgBB(mainImageBase64 || 'default');
+        // Optional: Upload to ImgBB if needed, or use passed URL directly 
+        const mainImageUrl = passedMainImageUrl || await uploadToImgBB(mainImageBase64 || 'default');
         const brandLogoUrl = await uploadToImgBB(brandLogoBase64 || 'default');
 
         const modifications = [
@@ -71,6 +72,7 @@ export async function POST(request) {
                 type: 'text',
                 text: cleanTitle,
                 color: 'rgb(255, 255, 255)',
+                'font-size': 'auto',
                 visible: 'true',
             },
             {
@@ -78,6 +80,7 @@ export async function POST(request) {
                 type: 'text',
                 text: cleanCaption,
                 color: 'rgb(255, 255, 255)',
+                'font-size': 'auto',
                 visible: 'true',
             },
             {

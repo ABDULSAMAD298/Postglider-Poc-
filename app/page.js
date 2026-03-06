@@ -347,12 +347,153 @@ function EditorModal({ isOpen, onClose, platform }) {
   );
 }
 
+// ─── ArtVerve AI Modal ────────────────────────────────────────────────────────
+function ArtVerveModal({ isOpen, onClose }) {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      // Load script dynamically
+      const script = document.createElement('script');
+      script.src = "https://start.designplatform.shop/api/embed/bundle.js";
+      script.defer = true;
+      script.id = 'artverve-script';
+      document.body.appendChild(script);
+    } else {
+      document.body.style.overflow = '';
+      const existingScript = document.getElementById('artverve-script');
+      if (existingScript) existingScript.remove();
+    }
+    return () => {
+      document.body.style.overflow = '';
+      const existingScript = document.getElementById('artverve-script');
+      if (existingScript) existingScript.remove();
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        animation: 'fadeIn 0.25s ease',
+      }}
+    >
+      <div
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(2, 6, 23, 0.8)',
+          backdropFilter: 'blur(6px)',
+        }}
+      />
+      <div
+        style={{
+          position: 'relative',
+          margin: '20px auto',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#fff',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+          animation: 'scaleIn 0.25s ease',
+          width: '90vw',
+          maxWidth: '1200px',
+          padding: 0,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 20px',
+            borderBottom: '1px solid #eee',
+            background: '#fafafa',
+            flexShrink: 0,
+            height: 'auto',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img
+              src="/artverve-logo.png"
+              alt="ArtVerve Logo"
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                marginRight: '10px',
+                verticalAlign: 'middle'
+              }}
+            />
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
+                ArtVerve AI Image Generator
+              </p>
+              <p style={{ fontSize: '12px', color: '#64748b', lineHeight: 1 }}>
+                Generate the perfect background using AI — then paste the URL below
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              background: '#fff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '17px',
+              color: '#64748b',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#fee2e2';
+              e.currentTarget.style.borderColor = '#fca5a5';
+              e.currentTarget.style.color = '#ef4444';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#fff';
+              e.currentTarget.style.borderColor = '#e2e8f0';
+              e.currentTarget.style.color = '#64748b';
+            }}
+          >
+            ×
+          </button>
+        </div>
+        <div style={{ margin: 0, padding: 0, display: 'block', height: '580px', width: '100%', overflow: 'hidden' }}>
+          <div
+            id="deployment-ec789401-e819-45c3-afe5-c680d063b254"
+            style={{
+              height: '100%',
+              width: '100%'
+            }}
+          ></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Form Panel ───────────────────────────────────────────────────────────────
-function FormPanel({ onGenerate, isGenerating, platform, setPlatform }) {
+function FormPanel({ onGenerate, isGenerating, platform, setPlatform, onOpenArtVerve }) {
   const [title, setTitle] = useState('');
   const [caption, setCaption] = useState('');
   const [mainImage, setMainImage] = useState(null);
   const [mainImagePreview, setMainImagePreview] = useState(null);
+  const [mainImageUrlInput, setMainImageUrlInput] = useState('');
+  const [isArtVerveAccordionOpen, setIsArtVerveAccordionOpen] = useState(false);
   const [brandLogo, setBrandLogo] = useState(null);
   const [brandLogoPreview, setBrandLogoPreview] = useState(null);
 
@@ -380,6 +521,7 @@ function FormPanel({ onGenerate, isGenerating, platform, setPlatform }) {
       mainTitle: title,
       captionText: caption,
       mainImageBase64,
+      mainImageUrl: mainImageUrlInput && !mainImage ? mainImageUrlInput : null,
       brandLogoBase64,
       platform
     });
@@ -515,7 +657,7 @@ function FormPanel({ onGenerate, isGenerating, platform, setPlatform }) {
             <label htmlFor="main-image" style={labelStyle}>
               Main Image
             </label>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
               <div
                 style={{
                   width: '60px',
@@ -532,27 +674,126 @@ function FormPanel({ onGenerate, isGenerating, platform, setPlatform }) {
               >
                 {mainImagePreview ? (
                   <img src={mainImagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : mainImageUrlInput && !mainImage ? (
+                  <img src={mainImageUrlInput} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
                 ) : (
                   <span style={{ fontSize: '20px' }}>🖼️</span>
                 )}
               </div>
-              <input
-                id="main-image"
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    setMainImage(file);
-                    setMainImagePreview(URL.createObjectURL(file));
-                  }
-                }}
-                style={{ fontSize: '12px' }}
-              />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input
+                  id="main-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setMainImage(file);
+                      setMainImagePreview(URL.createObjectURL(file));
+                    } else {
+                      setMainImage(null);
+                      setMainImagePreview(null);
+                    }
+                  }}
+                  style={{ fontSize: '12px' }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>── OR ──</span>
+                </div>
+                <input
+                  type="url"
+                  placeholder="🔗 Paste ArtVerve image URL here..."
+                  value={mainImageUrlInput}
+                  onChange={(e) => setMainImageUrlInput(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    fontSize: '13px',
+                    fontFamily: 'inherit',
+                    color: '#0f172a',
+                    background: '#fff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    outline: 'none',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#6366f1';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e2e8f0';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
             </div>
-            <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '5px' }}>
-              Upload a background image (jpg, png, webp)
-            </p>
+          </div>
+
+          {/* ArtVerve Accordion */}
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', background: '#fafafa' }}>
+            <button
+              type="button"
+              onClick={() => setIsArtVerveAccordionOpen(!isArtVerveAccordionOpen)}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14px' }}>✨</span>
+                <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#374151' }}>
+                  Need AI help for your background image?
+                </span>
+              </div>
+              <span style={{ transform: isArtVerveAccordionOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#94a3b8' }}>▼</span>
+            </button>
+            {isArtVerveAccordionOpen && (
+              <div style={{ padding: '0 14px 14px 14px', borderTop: '1px solid #e2e8f0', background: '#fff' }}>
+                <p style={{ fontSize: '12.5px', color: '#64748b', marginTop: '14px', marginBottom: '14px', lineHeight: 1.5 }}>
+                  Open the ArtVerve AI image generator to create stunning backgrounds instantly. Once generated, simply paste the image URL in the field above!
+                </p>
+                <button
+                  type="button"
+                  onClick={onOpenArtVerve}
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px',
+                    fontSize: '13.5px',
+                    fontWeight: 600,
+                    fontFamily: 'inherit',
+                    color: '#fff',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <span style={{ fontSize: '14px' }}>🎨</span>
+                  Launch ArtVerve AI Generator
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Brand Logo Upload */}
@@ -1199,6 +1440,7 @@ export default function Home() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isArtVerveOpen, setIsArtVerveOpen] = useState(false);
   const [currentPlatform, setCurrentPlatform] = useState('instagram');
   const [toasts, setToasts] = useState([]);
   const lastFormData = useRef(null);
@@ -1238,6 +1480,7 @@ export default function Home() {
           mainTitle: formData.mainTitle,
           captionText: formData.captionText,
           mainImageBase64: cleanedMainImage,
+          mainImageUrl: formData.mainImageUrl,
           brandLogoBase64: cleanedBrandLogo,
           platform: formData.platform
         }),
@@ -1281,6 +1524,7 @@ export default function Home() {
     <>
       <Toast toasts={toasts} removeToast={removeToast} />
       <EditorModal isOpen={isEditorOpen} onClose={() => setIsEditorOpen(false)} platform={currentPlatform} />
+      <ArtVerveModal isOpen={isArtVerveOpen} onClose={() => setIsArtVerveOpen(false)} />
 
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Header />
@@ -1383,6 +1627,7 @@ export default function Home() {
               isGenerating={resultState === 'loading'}
               platform={currentPlatform}
               setPlatform={setCurrentPlatform}
+              onOpenArtVerve={() => setIsArtVerveOpen(true)}
             />
             <ResultPanel
               state={resultState}
